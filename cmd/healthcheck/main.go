@@ -13,11 +13,12 @@ func main() {
 		port = os.Args[1]
 	}
 	client := &http.Client{Timeout: 2 * time.Second}
-	resp, err := client.Get(fmt.Sprintf("http://localhost:%s/health", port))
+	url := fmt.Sprintf("http://localhost:%s/health", port) //nolint:gosec // localhost only
+	resp, err := client.Get(url)
 	if err != nil {
 		os.Exit(1)
 	}
-	resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	if resp.StatusCode != http.StatusOK {
 		os.Exit(1)
 	}
