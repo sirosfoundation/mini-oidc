@@ -1,7 +1,7 @@
 # Binaries
 bin/
-op
-rp
+/op
+/rp
 *.exe
 
 # Test

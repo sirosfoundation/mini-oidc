@@ -1,7 +1,9 @@
 # mini-oidc
 
 [![CI](https://github.com/sirosfoundation/mini-oidc/actions/workflows/ci.yml/badge.svg)](https://github.com/sirosfoundation/mini-oidc/actions/workflows/ci.yml)
-[![Docker](https://github.com/sirosfoundation/mini-oidc/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/sirosfoundation/mini-oidc/pkgs/container/mini-oidc)
+[![Security](https://github.com/sirosfoundation/mini-oidc/actions/workflows/security.yml/badge.svg)](https://github.com/sirosfoundation/mini-oidc/actions/workflows/security.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sirosfoundation/mini-oidc)](https://goreportcard.com/report/github.com/sirosfoundation/mini-oidc)
+[![License](https://img.shields.io/badge/License-BSD_2--Clause-blue.svg)](LICENSE)
 
 A minimal OpenID Connect Provider (OP) and Relying Party (RP) for testing OIDC flows.
 Ships as a single container image with both binaries — select which to run via the command.
