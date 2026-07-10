@@ -1,0 +1,18 @@
+# Production / Docker configuration.
+# Environment variables are expanded in string values: ${VAR_NAME}
+server:
+  op_port: 9005
+  rp_port: 9006
+  issuer: "${ISSUER}"
+
+clients:
+  - client_id: "${CLIENT_ID:-mini-oidc-rp}"
+    client_name: "Relying Party"
+    redirect_uris:
+      - "${RP_BASE_URL}/callback"
+    token_endpoint_auth_method: "none"
+
+rp:
+  base_url: "${RP_BASE_URL}"
+  client_id: "${CLIENT_ID:-mini-oidc-rp}"
+  op_issuer: "${ISSUER}"

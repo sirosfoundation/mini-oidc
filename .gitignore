@@ -1,0 +1,18 @@
+# Binaries
+bin/
+op
+rp
+*.exe
+
+# Test
+coverage.out
+coverage.txt
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

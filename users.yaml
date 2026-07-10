@@ -1,0 +1,36 @@
+# Users configuration for mini-oidc-provider.
+# Authentication is done by selecting a user from a dropdown — no passwords.
+
+users:
+  - sub: "alice-001"
+    given_name: "Alice"
+    family_name: "Wonderland"
+    name: "Alice Wonderland"
+    email: "alice@example.com"
+    birthdate: "1990-01-15"
+    place_of_birth: "Stockholm"
+    nationalities: ["SE"]
+    issuing_authority: "Swedish Tax Agency"
+    issuing_country: "SE"
+
+  - sub: "bob-002"
+    given_name: "Bob"
+    family_name: "Builder"
+    name: "Bob Builder"
+    email: "bob@example.com"
+    birthdate: "1985-06-20"
+    place_of_birth: "Göteborg"
+    nationalities: ["SE"]
+    issuing_authority: "Swedish Tax Agency"
+    issuing_country: "SE"
+
+  - sub: "carol-003"
+    given_name: "Carol"
+    family_name: "Danvers"
+    name: "Carol Danvers"
+    email: "carol@example.com"
+    birthdate: "1978-11-03"
+    place_of_birth: "Malmö"
+    nationalities: ["SE", "US"]
+    issuing_authority: "Swedish Tax Agency"
+    issuing_country: "SE"

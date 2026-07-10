@@ -1,0 +1,29 @@
+server:
+  op_port: 9005
+  rp_port: 9006
+  # Issuer URL for the OP. Use ${BASE_URL} to template from environment.
+  issuer: "http://localhost:9005"
+
+# Static OIDC clients. Supports ${var} templating from environment variables.
+# This allows flexible deployment across environments.
+clients:
+  - client_id: "mini-oidc-rp"
+    client_name: "Built-in Relying Party"
+    redirect_uris:
+      - "http://localhost:9006/callback"
+    token_endpoint_auth_method: "none"
+
+  # Example: template a wallet client with environment-driven callback URI
+  # - client_id: "${WALLET_CLIENT_ID}"
+  #   client_name: "Wallet"
+  #   redirect_uris:
+  #     - "${WALLET_REDIRECT_URI}"
+  #   token_endpoint_auth_method: "none"
+
+rp:
+  # RP's own externally reachable base URL
+  base_url: "http://localhost:9006"
+  # Client ID to use when talking to the OP
+  client_id: "mini-oidc-rp"
+  # OP issuer to connect to (typically same as server.issuer)
+  op_issuer: "http://localhost:9005"
