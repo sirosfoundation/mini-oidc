@@ -75,6 +75,7 @@ func main() {
 	mux.HandleFunc("GET /.well-known/openid-configuration", handleDiscovery)
 	mux.HandleFunc("GET /jwks", handleJWKS)
 	mux.HandleFunc("POST /register", handleRegister)
+	mux.HandleFunc("POST /par", handlePAR)
 	mux.HandleFunc("GET /authorize", handleAuthorize)
 	mux.HandleFunc("POST /authorize/login", handleLogin)
 	mux.HandleFunc("POST /token", handleToken)
@@ -98,13 +99,15 @@ func handleDiscovery(w http.ResponseWriter, r *http.Request) {
 		"userinfo_endpoint":                     issuer + "/userinfo",
 		"jwks_uri":                              issuer + "/jwks",
 		"registration_endpoint":                 issuer + "/register",
-		"scopes_supported":                      []string{"openid", "profile", "email"},
+		"pushed_authorization_request_endpoint": issuer + "/par",
+		"scopes_supported":                      cfg.Server.ScopesSupported,
 		"response_types_supported":              []string{"code"},
 		"grant_types_supported":                 []string{"authorization_code"},
 		"subject_types_supported":               []string{"public"},
 		"id_token_signing_alg_values_supported": []string{"ES256"},
 		"token_endpoint_auth_methods_supported": []string{"client_secret_post", "client_secret_basic", "none"},
 		"code_challenge_methods_supported":      []string{"S256", "plain"},
+		"require_pushed_authorization_requests": false,
 	})
 }
 
@@ -126,6 +129,14 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	if authMethod == "" {
 		authMethod = "client_secret_basic"
 	}
+	// Store dynamically registered client in config
+	cfg.Clients = append(cfg.Clients, config.ClientConfig{
+		ClientID:                clientID,
+		ClientName:              "dynamic",
+		ClientSecret:            clientSecret,
+		RedirectURIs:            body.RedirectURIs,
+		TokenEndpointAuthMethod: authMethod,
+	})
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"client_id":                  clientID,
 		"client_secret":              clientSecret,
@@ -138,8 +149,71 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// --- Pushed Authorization Request (RFC 9126) ---
+
+var parStore = struct {
+	sync.RWMutex
+	m map[string]url.Values
+}{m: make(map[string]url.Values)}
+
+func handlePAR(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_request"})
+		return
+	}
+
+	// Authenticate client
+	clientID, _, _ := extractClientAuth(r)
+	if clientID == "" {
+		clientID = r.FormValue("client_id")
+	}
+	if clientID == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid_client", "error_description": "client_id required"})
+		return
+	}
+
+	// Store the authorization parameters
+	requestURI := "urn:ietf:params:oauth:request_uri:" + randomHex(16)
+	parStore.Lock()
+	parStore.m[requestURI] = r.Form
+	parStore.Unlock()
+
+	// Clean up after 90 seconds
+	go func() {
+		time.Sleep(90 * time.Second)
+		parStore.Lock()
+		delete(parStore.m, requestURI)
+		parStore.Unlock()
+	}()
+
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"request_uri": requestURI,
+		"expires_in":  90,
+	})
+}
+
 func handleAuthorize(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
+
+	// Support PAR: if request_uri is present, look up stored params
+	if requestURI := q.Get("request_uri"); requestURI != "" {
+		parStore.RLock()
+		stored, ok := parStore.m[requestURI]
+		parStore.RUnlock()
+		if !ok {
+			http.Error(w, "invalid or expired request_uri", http.StatusBadRequest)
+			return
+		}
+		// Merge stored PAR params (they take precedence)
+		for k, v := range stored {
+			q[k] = v
+		}
+		// Clean up used request_uri
+		parStore.Lock()
+		delete(parStore.m, requestURI)
+		parStore.Unlock()
+	}
+
 	data := struct {
 		ClientID string
 		Scope    string
@@ -149,7 +223,7 @@ func handleAuthorize(w http.ResponseWriter, r *http.Request) {
 		ClientID: q.Get("client_id"),
 		Scope:    q.Get("scope"),
 		Users:    userStore.Users,
-		Query:    r.URL.RawQuery,
+		Query:    q.Encode(),
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
@@ -211,6 +285,26 @@ func handleToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// --- Client Authentication ---
+	clientID, clientSecret, hasAuth := extractClientAuth(r)
+	if clientID == "" {
+		clientID = r.FormValue("client_id")
+		clientSecret = r.FormValue("client_secret")
+	}
+
+	client := cfg.FindClient(clientID)
+	// For unknown clients (e.g. dynamically registered), allow through
+	if client != nil {
+		if client.TokenEndpointAuthMethod != "none" && !hasAuth && clientSecret == "" {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid_client", "error_description": "client authentication required"})
+			return
+		}
+		if !client.VerifyClientSecret(clientSecret) {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid_client", "error_description": "invalid client credentials"})
+			return
+		}
+	}
+
 	code := r.FormValue("code")
 	codeVerifier := r.FormValue("code_verifier")
 
@@ -254,12 +348,7 @@ func handleToken(w http.ResponseWriter, r *http.Request) {
 		NotBefore: josejwt.NewNumericDate(now),
 	}
 
-	extra := map[string]any{
-		"given_name":  user.GivenName,
-		"family_name": user.FamilyName,
-		"name":        user.Name,
-		"email":       user.Email,
-	}
+	extra := claimsForScopes(user, ac.Scope)
 	if ac.Nonce != "" {
 		extra["nonce"] = ac.Nonce
 	}
@@ -307,6 +396,90 @@ func handleUserinfo(w http.ResponseWriter, r *http.Request) {
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": version})
+}
+
+// --- Client Authentication ---
+
+// extractClientAuth extracts client credentials from the Authorization header (Basic auth).
+func extractClientAuth(r *http.Request) (clientID, clientSecret string, ok bool) {
+	auth := r.Header.Get("Authorization")
+	if !strings.HasPrefix(auth, "Basic ") {
+		return "", "", false
+	}
+	decoded, err := base64.StdEncoding.DecodeString(auth[6:])
+	if err != nil {
+		return "", "", false
+	}
+	parts := strings.SplitN(string(decoded), ":", 2)
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	// URL-decode per RFC 6749 §2.3.1
+	id, _ := url.QueryUnescape(parts[0])
+	secret, _ := url.QueryUnescape(parts[1])
+	return id, secret, true
+}
+
+// --- Scope-Based Claim Filtering ---
+
+// claimsForScopes returns user claims filtered by the requested OIDC scopes.
+func claimsForScopes(user *users.User, scopeStr string) map[string]any {
+	scopes := strings.Fields(scopeStr)
+	claims := make(map[string]any)
+
+	has := func(s string) bool {
+		for _, sc := range scopes {
+			if sc == s {
+				return true
+			}
+		}
+		return false
+	}
+
+	// "profile" scope → name, family_name, given_name, birthdate, etc.
+	if has("profile") {
+		if user.GivenName != "" {
+			claims["given_name"] = user.GivenName
+		}
+		if user.FamilyName != "" {
+			claims["family_name"] = user.FamilyName
+		}
+		if user.Name != "" {
+			claims["name"] = user.Name
+		}
+		if user.Birthdate != "" {
+			claims["birthdate"] = user.Birthdate
+		}
+		if user.PlaceOfBirth != "" {
+			claims["place_of_birth"] = user.PlaceOfBirth
+		}
+		if len(user.Nationalities) > 0 {
+			claims["nationalities"] = user.Nationalities
+		}
+		if user.IssuingAuthority != "" {
+			claims["issuing_authority"] = user.IssuingAuthority
+		}
+		if user.IssuingCountry != "" {
+			claims["issuing_country"] = user.IssuingCountry
+		}
+	}
+
+	// "email" scope → email
+	if has("email") {
+		if user.Email != "" {
+			claims["email"] = user.Email
+		}
+	}
+
+	// If no recognized scopes matched, return all claims (backwards compat)
+	if !has("profile") && !has("email") {
+		claims["given_name"] = user.GivenName
+		claims["family_name"] = user.FamilyName
+		claims["name"] = user.Name
+		claims["email"] = user.Email
+	}
+
+	return claims
 }
 
 // --- Helpers ---

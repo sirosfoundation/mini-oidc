@@ -2,7 +2,8 @@
 
 [![CI](https://github.com/sirosfoundation/mini-oidc/actions/workflows/ci.yml/badge.svg)](https://github.com/sirosfoundation/mini-oidc/actions/workflows/ci.yml)
 [![Security](https://github.com/sirosfoundation/mini-oidc/actions/workflows/security.yml/badge.svg)](https://github.com/sirosfoundation/mini-oidc/actions/workflows/security.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/sirosfoundation/mini-oidc)](https://goreportcard.com/report/github.com/sirosfoundation/mini-oidc)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=sirosfoundation_mini-oidc&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=sirosfoundation_mini-oidc)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sirosfoundation/mini-oidc/badge)](https://scorecard.dev/viewer/?uri=github.com/sirosfoundation/mini-oidc)
 [![License](https://img.shields.io/badge/License-BSD_2--Clause-blue.svg)](LICENSE)
 
 A minimal OpenID Connect Provider (OP) and Relying Party (RP) for testing OIDC flows.

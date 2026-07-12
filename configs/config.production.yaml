@@ -4,6 +4,13 @@ server:
   op_port: 9005
   rp_port: 9006
   issuer: "${ISSUER}"
+  scopes_supported:
+    - openid
+    - profile
+    - email
+    - pid
+    - pid_1_5
+    - pid_1_8
 
 clients:
   - client_id: "${CLIENT_ID:-mini-oidc-rp}"
@@ -11,6 +18,13 @@ clients:
     redirect_uris:
       - "${RP_BASE_URL}/callback"
     token_endpoint_auth_method: "none"
+
+  - client_id: "${APIGW_CLIENT_ID:-apigw-oidc-client}"
+    client_name: "VC API Gateway"
+    client_secret: "${APIGW_CLIENT_SECRET:-test-secret}"
+    redirect_uris:
+      - "${APIGW_REDIRECT_URI:-http://localhost:8091/oidcrp/callback}"
+    token_endpoint_auth_method: "client_secret_basic"
 
 rp:
   base_url: "${RP_BASE_URL}"

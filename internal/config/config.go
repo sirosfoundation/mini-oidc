@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"os"
 	"regexp"
@@ -10,14 +11,16 @@ import (
 )
 
 type ServerConfig struct {
-	OPPort int    `yaml:"op_port"`
-	RPPort int    `yaml:"rp_port"`
-	Issuer string `yaml:"issuer"`
+	OPPort          int      `yaml:"op_port"`
+	RPPort          int      `yaml:"rp_port"`
+	Issuer          string   `yaml:"issuer"`
+	ScopesSupported []string `yaml:"scopes_supported"`
 }
 
 type ClientConfig struct {
 	ClientID                string   `yaml:"client_id"`
 	ClientName              string   `yaml:"client_name"`
+	ClientSecret            string   `yaml:"client_secret"`
 	RedirectURIs            []string `yaml:"redirect_uris"`
 	TokenEndpointAuthMethod string   `yaml:"token_endpoint_auth_method"`
 }
@@ -34,6 +37,25 @@ type Config struct {
 	RP      RPConfig       `yaml:"rp"`
 }
 
+// FindClient looks up a client by ID. Returns nil if not found.
+func (c *Config) FindClient(clientID string) *ClientConfig {
+	for i := range c.Clients {
+		if c.Clients[i].ClientID == clientID {
+			return &c.Clients[i]
+		}
+	}
+	return nil
+}
+
+// VerifyClientSecret checks the client's secret using constant-time comparison.
+// Returns true if the client uses "none" auth or if the secret matches.
+func (cl *ClientConfig) VerifyClientSecret(secret string) bool {
+	if cl.TokenEndpointAuthMethod == "none" || cl.ClientSecret == "" {
+		return true
+	}
+	return subtle.ConstantTimeCompare([]byte(cl.ClientSecret), []byte(secret)) == 1
+}
+
 // Load reads the config file and expands environment variables in string values.
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
@@ -41,7 +63,6 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("reading config: %w", err)
 	}
 
-	// Expand environment variables in the raw YAML
 	expanded := expandEnvVars(string(data))
 
 	var cfg Config
@@ -59,6 +80,9 @@ func Load(path string) (*Config, error) {
 	if cfg.Server.Issuer == "" {
 		cfg.Server.Issuer = fmt.Sprintf("http://localhost:%d", cfg.Server.OPPort)
 	}
+	if len(cfg.Server.ScopesSupported) == 0 {
+		cfg.Server.ScopesSupported = []string{"openid", "profile", "email"}
+	}
 	if cfg.RP.BaseURL == "" {
 		cfg.RP.BaseURL = fmt.Sprintf("http://localhost:%d", cfg.Server.RPPort)
 	}
@@ -67,6 +91,17 @@ func Load(path string) (*Config, error) {
 	}
 	if cfg.RP.ClientID == "" {
 		cfg.RP.ClientID = "mini-oidc-rp"
+	}
+
+	// Default auth method for clients that don't specify one
+	for i := range cfg.Clients {
+		if cfg.Clients[i].TokenEndpointAuthMethod == "" {
+			if cfg.Clients[i].ClientSecret != "" {
+				cfg.Clients[i].TokenEndpointAuthMethod = "client_secret_basic"
+			} else {
+				cfg.Clients[i].TokenEndpointAuthMethod = "none"
+			}
+		}
 	}
 
 	return &cfg, nil
@@ -88,3 +123,4 @@ func expandEnvVars(s string) string {
 		return match // leave unexpanded if no env var and no default
 	})
 }
+

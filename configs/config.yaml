@@ -3,9 +3,16 @@ server:
   rp_port: 9006
   # Issuer URL for the OP. Use ${BASE_URL} to template from environment.
   issuer: "http://localhost:9005"
+  # Scopes advertised in discovery. Includes OID4VCI credential scopes.
+  scopes_supported:
+    - openid
+    - profile
+    - email
+    - pid
+    - pid_1_5
+    - pid_1_8
 
 # Static OIDC clients. Supports ${var} templating from environment variables.
-# This allows flexible deployment across environments.
 clients:
   - client_id: "mini-oidc-rp"
     client_name: "Built-in Relying Party"
@@ -13,17 +20,15 @@ clients:
       - "http://localhost:9006/callback"
     token_endpoint_auth_method: "none"
 
-  # Example: template a wallet client with environment-driven callback URI
-  # - client_id: "${WALLET_CLIENT_ID}"
-  #   client_name: "Wallet"
-  #   redirect_uris:
-  #     - "${WALLET_REDIRECT_URI}"
-  #   token_endpoint_auth_method: "none"
+  - client_id: "apigw-oidc-client"
+    client_name: "VC API Gateway"
+    client_secret: "test-secret"
+    redirect_uris:
+      - "http://localhost:8091/oidcrp/callback"
+      - "http://192.168.240.1:8091/oidcrp/callback"
+    token_endpoint_auth_method: "client_secret_basic"
 
 rp:
-  # RP's own externally reachable base URL
   base_url: "http://localhost:9006"
-  # Client ID to use when talking to the OP
   client_id: "mini-oidc-rp"
-  # OP issuer to connect to (typically same as server.issuer)
   op_issuer: "http://localhost:9005"

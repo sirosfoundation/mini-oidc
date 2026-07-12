@@ -14,6 +14,9 @@ services:
       - ISSUER=${MINI_OIDC_ISSUER:-http://mini-oidc-op:9005}
       - RP_BASE_URL=${MINI_OIDC_RP_URL:-http://mini-oidc-rp:9006}
       - CLIENT_ID=${MINI_OIDC_CLIENT_ID:-mini-oidc-rp}
+      - APIGW_CLIENT_ID=${APIGW_CLIENT_ID:-apigw-oidc-client}
+      - APIGW_CLIENT_SECRET=${APIGW_CLIENT_SECRET:-test-secret}
+      - APIGW_REDIRECT_URI=${APIGW_REDIRECT_URI:-http://vc-apigw:8091/oidcrp/callback}
     healthcheck:
       test: ["CMD", "/usr/local/bin/healthcheck", "9005"]
       interval: 5s
