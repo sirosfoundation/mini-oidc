@@ -15,27 +15,16 @@ jobs:
   sonarcloud:
     name: SonarCloud Scan
     runs-on: ubuntu-latest
-    # Only run if SONAR_TOKEN is configured (project must be set up in SonarCloud first)
-    if: ${{ secrets.SONAR_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod
-
-      - name: Generate Go coverage
-        run: go test -race -covermode=atomic -coverprofile=coverage.out ./... || true
-
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v8
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
             -Dsonar.organization=${{ github.repository_owner }}
             -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
-            -Dsonar.go.coverage.reportPaths=coverage.out
-            -Dsonar.coverage.exclusions=**/*_test.go,**/cmd/**,**/mocks/**
