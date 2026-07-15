@@ -123,4 +123,3 @@ func expandEnvVars(s string) string {
 		return match // leave unexpanded if no env var and no default
 	})
 }
-

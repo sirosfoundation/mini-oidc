@@ -3,7 +3,6 @@
 [![CI](https://github.com/sirosfoundation/mini-oidc/actions/workflows/ci.yml/badge.svg)](https://github.com/sirosfoundation/mini-oidc/actions/workflows/ci.yml)
 [![Security](https://github.com/sirosfoundation/mini-oidc/actions/workflows/security.yml/badge.svg)](https://github.com/sirosfoundation/mini-oidc/actions/workflows/security.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sirosfoundation/mini-oidc/badge)](https://scorecard.dev/viewer/?uri=github.com/sirosfoundation/mini-oidc)
-[![Go Report Card](https://goreportcard.com/badge/github.com/sirosfoundation/mini-oidc)](https://goreportcard.com/report/github.com/sirosfoundation/mini-oidc)
 [![License](https://img.shields.io/badge/License-BSD_2--Clause-blue.svg)](LICENSE)
 
 A minimal OpenID Connect Provider (OP) and Relying Party (RP) for integration testing.
