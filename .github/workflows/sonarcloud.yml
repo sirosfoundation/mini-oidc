@@ -35,3 +35,5 @@ jobs:
             -Dsonar.organization=${{ github.repository_owner }}
             -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
             -Dsonar.go.coverage.reportPaths=coverage.out
+            -Dsonar.tests=.
+            -Dsonar.test.inclusions=**/*_test.go
