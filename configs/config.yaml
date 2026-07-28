@@ -8,6 +8,7 @@ server:
     - openid
     - profile
     - email
+    - organisation
     - pid
     - pid_1_5
     - pid_1_8

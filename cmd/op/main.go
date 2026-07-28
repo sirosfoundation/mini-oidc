@@ -275,7 +275,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	u.RawQuery = params.Encode()
 
-	log.Printf("[op] user %s approved → %s", userSub, u.String())
+	log.Printf("[op] user %q approved → %s", userSub, u.String())
 	http.Redirect(w, r, u.String(), http.StatusFound)
 }
 
@@ -471,8 +471,24 @@ func claimsForScopes(user *users.User, scopeStr string) map[string]any {
 		}
 	}
 
+	// "organisation" scope → company affiliation, role, representation
+	if has("organisation") {
+		if user.Organisation != nil {
+			claims["organisation"] = user.Organisation
+		}
+		if user.Role != "" {
+			claims["role"] = user.Role
+		}
+		if user.RepresentationType != "" {
+			claims["representation_type"] = user.RepresentationType
+		}
+		if user.EmployeeID != "" {
+			claims["employee_id"] = user.EmployeeID
+		}
+	}
+
 	// If no recognized scopes matched, return all claims (backwards compat)
-	if !has("profile") && !has("email") {
+	if !has("profile") && !has("email") && !has("organisation") {
 		claims["given_name"] = user.GivenName
 		claims["family_name"] = user.FamilyName
 		claims["name"] = user.Name
@@ -558,7 +574,7 @@ var loginTmpl = template.Must(template.New("login").Parse(`<!DOCTYPE html>
       <label for="user">User</label>
       <select name="user" id="user">
         {{range .Users}}
-        <option value="{{.Sub}}">{{.Name}} ({{.Email}})</option>
+        <option value="{{.Sub}}">{{.Name}} ({{.Email}}){{if .Organisation}} — {{.Role}}, {{.Organisation.Name}}{{end}}</option>
         {{end}}
       </select>
       <div class="info">

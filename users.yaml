@@ -2,6 +2,8 @@
 # Authentication is done by selecting a user from a dropdown — no passwords.
 
 users:
+  # --- Natural persons (no company affiliation) ---
+
   - sub: "alice-001"
     given_name: "Alice"
     family_name: "Wonderland"
@@ -34,3 +36,139 @@ users:
     nationalities: ["SE", "US"]
     issuing_authority: "Swedish Tax Agency"
     issuing_country: "SE"
+
+  # --- Legal representatives (sole signatory of a company) ---
+
+  - sub: "erik-010"
+    given_name: "Erik"
+    family_name: "Lindström"
+    name: "Erik Lindström"
+    email: "erik.lindstrom@nordictech.example.com"
+    birthdate: "1975-03-22"
+    place_of_birth: "Uppsala"
+    nationalities: ["SE"]
+    issuing_authority: "Swedish Tax Agency"
+    issuing_country: "SE"
+    role: "CEO"
+    representation_type: "sole"
+    employee_id: "EMP-SE-00001"
+    organisation:
+      name: "Nordic Tech Solutions AB"
+      euid: "SEBOLAG.5591234567"
+      vat_id: "SE559123456701"
+      legal_form: "AB"
+      country: "SE"
+      registration_date: "2015-06-01"
+      status: "active"
+      activity_code: "62.01"
+      activity_description: "Computer programming activities"
+      registered_address:
+        full_address: "Sveavägen 42, 111 34 Stockholm, Sweden"
+        thoroughfare: "Sveavägen"
+        locator_designator: "42"
+        post_code: "111 34"
+        post_name: "Stockholm"
+        admin_unit_l1: "SE"
+        admin_unit_l2: "Stockholm"
+
+  # --- Joint representative (one of two signatories) ---
+
+  - sub: "maria-011"
+    given_name: "Maria"
+    family_name: "Schneider"
+    name: "Maria Schneider"
+    email: "maria.schneider@gruenberg-gmbh.example.com"
+    birthdate: "1982-09-14"
+    place_of_birth: "Berlin"
+    nationalities: ["DE"]
+    issuing_authority: "Bundesdruckerei"
+    issuing_country: "DE"
+    role: "CFO"
+    representation_type: "joint"
+    employee_id: "EMP-DE-00042"
+    organisation:
+      name: "Grünberg Consulting GmbH"
+      euid: "DEHRB.B123456"
+      lei: "529900T8BM49AURSDO55"
+      vat_id: "DE312345678"
+      tax_id: "27/123/45678"
+      legal_form: "GmbH"
+      country: "DE"
+      registration_date: "2010-02-15"
+      status: "active"
+      activity_code: "70.22"
+      activity_description: "Business and other management consultancy"
+      registered_address:
+        full_address: "Friedrichstraße 100, 10117 Berlin, Germany"
+        thoroughfare: "Friedrichstraße"
+        locator_designator: "100"
+        post_code: "10117"
+        post_name: "Berlin"
+        admin_unit_l1: "DE"
+        admin_unit_l2: "Berlin"
+
+  # --- Employee / contact person (no signing authority) ---
+
+  - sub: "jan-012"
+    given_name: "Jan"
+    family_name: "Kowalski"
+    name: "Jan Kowalski"
+    email: "jan.kowalski@gruenberg-gmbh.example.com"
+    birthdate: "1993-07-08"
+    place_of_birth: "Warsaw"
+    nationalities: ["PL"]
+    issuing_authority: "Bundesdruckerei"
+    issuing_country: "DE"
+    role: "Sales Manager"
+    employee_id: "EMP-DE-00089"
+    organisation:
+      name: "Grünberg Consulting GmbH"
+      euid: "DEHRB.B123456"
+      lei: "529900T8BM49AURSDO55"
+      vat_id: "DE312345678"
+      legal_form: "GmbH"
+      country: "DE"
+      registration_date: "2010-02-15"
+      status: "active"
+      registered_address:
+        full_address: "Friedrichstraße 100, 10117 Berlin, Germany"
+        thoroughfare: "Friedrichstraße"
+        locator_designator: "100"
+        post_code: "10117"
+        post_name: "Berlin"
+        admin_unit_l1: "DE"
+        admin_unit_l2: "Berlin"
+
+  # --- Representative of a French company (sole trader / power of attorney) ---
+
+  - sub: "sophie-013"
+    given_name: "Sophie"
+    family_name: "Dubois"
+    name: "Sophie Dubois"
+    email: "sophie@transport-dubois.example.com"
+    birthdate: "1988-12-01"
+    place_of_birth: "Lyon"
+    nationalities: ["FR"]
+    issuing_authority: "ANTS"
+    issuing_country: "FR"
+    role: "Gérant"
+    representation_type: "sole"
+    employee_id: "EMP-FR-00001"
+    organisation:
+      name: "Transport Dubois SARL"
+      euid: "FRRCS.Lyon.B987654321"
+      vat_id: "FR82987654321"
+      legal_form: "SARL"
+      country: "FR"
+      registration_date: "2018-11-20"
+      status: "active"
+      activity_code: "49.41"
+      activity_description: "Freight transport by road"
+      registered_address:
+        full_address: "15 Rue de la République, 69002 Lyon, France"
+        thoroughfare: "Rue de la République"
+        locator_designator: "15"
+        post_code: "69002"
+        post_name: "Lyon"
+        admin_unit_l1: "FR"
+        admin_unit_l2: "Auvergne-Rhône-Alpes"
