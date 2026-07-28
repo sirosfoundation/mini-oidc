@@ -275,7 +275,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	u.RawQuery = params.Encode()
 
-	log.Printf("[op] user %s approved → %s", userSub, u.String())
+	log.Printf("[op] user %q approved → %s", userSub, u.String())
 	http.Redirect(w, r, u.String(), http.StatusFound)
 }
 
