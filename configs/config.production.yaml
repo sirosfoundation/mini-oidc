@@ -12,6 +12,7 @@ server:
     - pid
     - pid_1_5
     - pid_1_8
+    - ehic
 
 clients:
   - client_id: "${CLIENT_ID:-mini-oidc-rp}"

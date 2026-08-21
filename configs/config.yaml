@@ -12,6 +12,7 @@ server:
     - pid
     - pid_1_5
     - pid_1_8
+    - ehic
 
 # Static OIDC clients. Supports ${var} templating from environment variables.
 clients:

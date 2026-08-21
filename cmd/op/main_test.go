@@ -84,3 +84,68 @@ func TestClaimsForScopesBackwardsCompat(t *testing.T) {
 		t.Fatalf("expected backwards-compat claims when no recognized scope, got %v", claims)
 	}
 }
+
+func ehicUser() *users.User {
+	u := testUser()
+	u.IssuingAuthority = "Swedish Tax Agency" // profile-scope string form
+	u.EHIC = &users.EHIC{
+		PersonalAdministrativeNumber: "SE-19900115-0001",
+		DocumentNumber:               "SE-EHIC-0000000001",
+		IssuingCountry:               "SE",
+		IssuingAuthority:             &users.NamedParty{ID: "SE:FK", Name: "Försäkringskassan"},
+		AuthenticSource:              &users.NamedParty{ID: "SE:FK", Name: "Försäkringskassan"},
+		DateOfIssuance:               "2025-01-15",
+		DateOfExpiry:                 "2035-01-15",
+		StartingDate:                 "2025-01-15",
+		EndingDate:                   "2035-01-15",
+	}
+	return u
+}
+
+func TestClaimsForScopesEHIC(t *testing.T) {
+	// apigw requests the credential type as the sole scope
+	// (Scopes: []string{session.CredentialType}), so this is the shape that
+	// actually reaches the OP in an EHIC issuance.
+	claims := claimsForScopes(ehicUser(), "openid ehic")
+
+	if claims["personal_administrative_number"] != "SE-19900115-0001" {
+		t.Fatalf("expected personal_administrative_number, got %v", claims)
+	}
+	if claims["document_number"] != "SE-EHIC-0000000001" {
+		t.Fatalf("expected document_number, got %v", claims)
+	}
+	for _, k := range []string{"date_of_issuance", "date_of_expiry", "starting_date", "ending_date", "issuing_country"} {
+		if _, ok := claims[k]; !ok {
+			t.Fatalf("expected %s claim, got %v", k, claims)
+		}
+	}
+
+	// issuing_authority and authentic_source are objects here, not the plain
+	// string "profile" releases - the EHIC credential type nests id+name.
+	ia, ok := claims["issuing_authority"].(*users.NamedParty)
+	if !ok {
+		t.Fatalf("expected issuing_authority to be a NamedParty, got %T", claims["issuing_authority"])
+	}
+	if ia.Name != "Försäkringskassan" {
+		t.Fatalf("unexpected issuing_authority: %+v", ia)
+	}
+	if _, ok := claims["authentic_source"].(*users.NamedParty); !ok {
+		t.Fatalf("expected authentic_source to be a NamedParty, got %T", claims["authentic_source"])
+	}
+
+	// The backwards-compat fallback must not fire for an ehic-only request; if
+	// it did, it would overwrite issuing_authority with the profile string.
+	if _, ok := claims["name"]; ok {
+		t.Fatalf("ehic scope should not release profile claims, got %v", claims)
+	}
+}
+
+func TestClaimsForScopesEHICOmittedWhenNil(t *testing.T) {
+	claims := claimsForScopes(testUser(), "openid ehic")
+
+	for _, k := range []string{"personal_administrative_number", "document_number", "authentic_source"} {
+		if _, ok := claims[k]; ok {
+			t.Fatalf("expected no %s for a user without ehic data, got %v", k, claims)
+		}
+	}
+}
