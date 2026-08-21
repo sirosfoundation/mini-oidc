@@ -14,7 +14,20 @@ users:
     nationalities: ["SE"]
     issuing_authority: "Swedish Tax Agency"
     issuing_country: "SE"
-
+    ehic:
+      personal_administrative_number: "SE-19900115-0001"
+      document_number: "SE-EHIC-0000000001"
+      issuing_country: "SE"
+      issuing_authority:
+        id: "SE:FK"
+        name: "Försäkringskassan"
+      authentic_source:
+        id: "SE:FK"
+        name: "Försäkringskassan"
+      date_of_issuance: "2025-01-15"
+      date_of_expiry: "2035-01-15"
+      starting_date: "2025-01-15"
+      ending_date: "2035-01-15"
   - sub: "bob-002"
     given_name: "Bob"
     family_name: "Builder"
@@ -25,7 +38,20 @@ users:
     nationalities: ["SE"]
     issuing_authority: "Swedish Tax Agency"
     issuing_country: "SE"
-
+    ehic:
+      personal_administrative_number: "SE-19850620-0002"
+      document_number: "SE-EHIC-0000000002"
+      issuing_country: "SE"
+      issuing_authority:
+        id: "SE:FK"
+        name: "Försäkringskassan"
+      authentic_source:
+        id: "SE:FK"
+        name: "Försäkringskassan"
+      date_of_issuance: "2024-06-20"
+      date_of_expiry: "2034-06-20"
+      starting_date: "2024-06-20"
+      ending_date: "2034-06-20"
   - sub: "carol-003"
     given_name: "Carol"
     family_name: "Danvers"
@@ -38,7 +64,20 @@ users:
     issuing_country: "SE"
 
   # --- Legal representatives (sole signatory of a company) ---
-
+    ehic:
+      personal_administrative_number: "SE-19781103-0003"
+      document_number: "SE-EHIC-0000000003"
+      issuing_country: "SE"
+      issuing_authority:
+        id: "SE:FK"
+        name: "Försäkringskassan"
+      authentic_source:
+        id: "SE:FK"
+        name: "Försäkringskassan"
+      date_of_issuance: "2023-11-03"
+      date_of_expiry: "2033-11-03"
+      starting_date: "2023-11-03"
+      ending_date: "2033-11-03"
   - sub: "erik-010"
     given_name: "Erik"
     family_name: "Lindström"

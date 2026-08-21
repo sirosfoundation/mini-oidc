@@ -487,8 +487,51 @@ func claimsForScopes(user *users.User, scopeStr string) map[string]any {
 		}
 	}
 
-	// If no recognized scopes matched, return all claims (backwards compat)
-	if !has("profile") && !has("email") && !has("organisation") {
+	// "ehic" scope → European Health Insurance Card data.
+	//
+	// Emitted under the claim names the EHIC credential type (urn:eudi:ehic:1)
+	// declares, because vc's apigw uses the OIDC claims verbatim as the
+	// credential's document data (DocumentData: claims, in its OIDC RP
+	// callback) and requests the credential type as the scope. Anything not
+	// named exactly as the credential type expects simply won't be present to
+	// disclose, and a verifier's DCQL query for it won't match.
+	if has("ehic") {
+		if e := user.EHIC; e != nil {
+			if e.PersonalAdministrativeNumber != "" {
+				claims["personal_administrative_number"] = e.PersonalAdministrativeNumber
+			}
+			if e.DocumentNumber != "" {
+				claims["document_number"] = e.DocumentNumber
+			}
+			if e.IssuingAuthority != nil {
+				claims["issuing_authority"] = e.IssuingAuthority
+			}
+			if e.IssuingCountry != "" {
+				claims["issuing_country"] = e.IssuingCountry
+			}
+			if e.AuthenticSource != nil {
+				claims["authentic_source"] = e.AuthenticSource
+			}
+			if e.DateOfIssuance != "" {
+				claims["date_of_issuance"] = e.DateOfIssuance
+			}
+			if e.DateOfExpiry != "" {
+				claims["date_of_expiry"] = e.DateOfExpiry
+			}
+			if e.StartingDate != "" {
+				claims["starting_date"] = e.StartingDate
+			}
+			if e.EndingDate != "" {
+				claims["ending_date"] = e.EndingDate
+			}
+		}
+	}
+
+	// If no recognized scopes matched, return all claims (backwards compat).
+	// "ehic" counts as recognized: without it here, an ehic-only request (which
+	// is what apigw sends - Scopes: []string{session.CredentialType}) would
+	// fall through and overwrite the EHIC claims above with profile ones.
+	if !has("profile") && !has("email") && !has("organisation") && !has("ehic") {
 		claims["given_name"] = user.GivenName
 		claims["family_name"] = user.FamilyName
 		claims["name"] = user.Name

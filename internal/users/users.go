@@ -47,11 +47,40 @@ type User struct {
 	IssuingAuthority string   `yaml:"issuing_authority" json:"issuing_authority,omitempty"`
 	IssuingCountry   string   `yaml:"issuing_country" json:"issuing_country,omitempty"`
 
+	// EHIC (European Health Insurance Card) fields, released under the "ehic"
+	// scope. Kept as a nested struct rather than flat claims because the EHIC
+	// credential type nests issuing_authority/authentic_source as objects with
+	// id+name, whereas "profile" releases issuing_authority as a plain string -
+	// the same claim name means different shapes in the two credential types.
+	EHIC *EHIC `yaml:"ehic" json:"ehic,omitempty"`
+
 	// Company affiliation fields for representation / legal person scenarios.
 	Organisation       *Organisation `yaml:"organisation" json:"organisation,omitempty"`
 	Role               string        `yaml:"role" json:"role,omitempty"`
 	RepresentationType string        `yaml:"representation_type" json:"representation_type,omitempty"`
 	EmployeeID         string        `yaml:"employee_id" json:"employee_id,omitempty"`
+}
+
+// EHIC holds the data released under the "ehic" scope. Field names mirror the
+// EHIC credential type metadata (urn:eudi:ehic:1) so a wallet can match the
+// issued credential against a DCQL query without any further remapping.
+type EHIC struct {
+	PersonalAdministrativeNumber string      `yaml:"personal_administrative_number" json:"personal_administrative_number,omitempty"`
+	DocumentNumber               string      `yaml:"document_number" json:"document_number,omitempty"`
+	IssuingAuthority             *NamedParty `yaml:"issuing_authority" json:"issuing_authority,omitempty"`
+	IssuingCountry               string      `yaml:"issuing_country" json:"issuing_country,omitempty"`
+	AuthenticSource              *NamedParty `yaml:"authentic_source" json:"authentic_source,omitempty"`
+	DateOfIssuance               string      `yaml:"date_of_issuance" json:"date_of_issuance,omitempty"`
+	DateOfExpiry                 string      `yaml:"date_of_expiry" json:"date_of_expiry,omitempty"`
+	StartingDate                 string      `yaml:"starting_date" json:"starting_date,omitempty"`
+	EndingDate                   string      `yaml:"ending_date" json:"ending_date,omitempty"`
+}
+
+// NamedParty is the id+name pair EHIC uses for both issuing_authority and
+// authentic_source.
+type NamedParty struct {
+	ID   string `yaml:"id" json:"id,omitempty"`
+	Name string `yaml:"name" json:"name,omitempty"`
 }
 
 type UsersFile struct {
