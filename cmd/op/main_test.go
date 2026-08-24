@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"time"
 
 	"github.com/sirosfoundation/mini-oidc/internal/users"
 )
@@ -146,6 +147,148 @@ func TestClaimsForScopesEHICOmittedWhenNil(t *testing.T) {
 	for _, k := range []string{"personal_administrative_number", "document_number", "authentic_source"} {
 		if _, ok := claims[k]; ok {
 			t.Fatalf("expected no %s for a user without ehic data, got %v", k, claims)
+		}
+	}
+}
+
+func pidUser() *users.User {
+	u := testUser()
+	u.Birthdate = "1990-01-15"
+	u.PlaceOfBirth = "Stockholm"
+	u.Nationalities = []string{"SE", "NO"}
+	u.IssuingAuthority = "Swedish Tax Agency"
+	u.IssuingCountry = "SE"
+	return u
+}
+
+// apigw requests the credential type as the sole scope
+// (Scopes: []string{session.CredentialType}), so a bare "pid_1_8" is the shape
+// that actually reaches the OP during issuance - not "profile".
+func TestClaimsForScopesPIDARF18(t *testing.T) {
+	claims := claimsForScopes(pidUser(), "openid pid_1_8")
+
+	if claims["birthdate"] != "1990-01-15" {
+		t.Fatalf("expected birthdate, got %v", claims)
+	}
+	if claims["place_of_birth"] != "Stockholm" {
+		t.Fatalf("expected ARF 1.8 place_of_birth, got %v", claims)
+	}
+	nats, ok := claims["nationalities"].([]string)
+	if !ok || len(nats) != 2 {
+		t.Fatalf("expected ARF 1.8 nationalities list, got %T %v", claims["nationalities"], claims["nationalities"])
+	}
+	if claims["issuing_authority"] != "Swedish Tax Agency" || claims["issuing_country"] != "SE" {
+		t.Fatalf("expected issuing authority/country, got %v", claims)
+	}
+
+	// ARF 1.5 spellings must NOT appear: a claim under the wrong version's
+	// name is not present to disclose, and pollutes the credential besides.
+	for _, k := range []string{"birth_place", "nationality", "age_over_18"} {
+		if _, ok := claims[k]; ok {
+			t.Fatalf("ARF 1.8 must not emit the 1.5 claim %q, got %v", k, claims)
+		}
+	}
+
+	over, ok := claims["age_equal_or_over"].(map[string]bool)
+	if !ok {
+		t.Fatalf("expected age_equal_or_over map, got %T", claims["age_equal_or_over"])
+	}
+	if !over["18"] {
+		t.Fatalf("a person born in 1990 is over 18, got %v", over)
+	}
+	if over["65"] {
+		t.Fatalf("a person born in 1990 is not yet 65, got %v", over)
+	}
+}
+
+func TestClaimsForScopesPIDARF15(t *testing.T) {
+	claims := claimsForScopes(pidUser(), "openid pid_1_5")
+
+	if claims["birth_place"] != "Stockholm" {
+		t.Fatalf("expected ARF 1.5 birth_place, got %v", claims)
+	}
+	if claims["nationality"] != "SE" {
+		t.Fatalf("expected ARF 1.5 single nationality, got %v", claims["nationality"])
+	}
+	if claims["age_over_18"] != true || claims["age_over_65"] != false {
+		t.Fatalf("expected flat ARF 1.5 age booleans, got %v", claims)
+	}
+
+	for _, k := range []string{"place_of_birth", "nationalities", "age_equal_or_over"} {
+		if _, ok := claims[k]; ok {
+			t.Fatalf("ARF 1.5 must not emit the 1.8 claim %q, got %v", k, claims)
+		}
+	}
+}
+
+// The unversioned "pid" scope follows the current ARF version.
+func TestClaimsForScopesPIDUnversionedFollowsARF18(t *testing.T) {
+	claims := claimsForScopes(pidUser(), "openid pid")
+
+	if _, ok := claims["age_equal_or_over"]; !ok {
+		t.Fatalf("expected \"pid\" to use the ARF 1.8 vocabulary, got %v", claims)
+	}
+	if _, ok := claims["nationality"]; ok {
+		t.Fatalf("expected \"pid\" not to use ARF 1.5 spellings, got %v", claims)
+	}
+}
+
+// Regression guard for the bug this fixes: these scopes were advertised in
+// scopes_supported with no handler, so they fell through to the
+// backwards-compat block and released four claims - nowhere near enough to
+// build a PID, which made the issuer reject the whole credential request.
+func TestClaimsForScopesPIDDoesNotFallThrough(t *testing.T) {
+	for _, scope := range []string{"pid", "pid_1_5", "pid_1_8"} {
+		claims := claimsForScopes(pidUser(), "openid "+scope)
+		if _, ok := claims["name"]; ok {
+			t.Fatalf("%s must not fall through to the backwards-compat claims, got %v", scope, claims)
+		}
+		if _, ok := claims["birthdate"]; !ok {
+			t.Fatalf("%s released no birthdate - the fallthrough bug is back: %v", scope, claims)
+		}
+	}
+}
+
+func TestClaimsForScopesPIDOmitsAgeWithoutBirthdate(t *testing.T) {
+	u := pidUser()
+	u.Birthdate = ""
+	claims := claimsForScopes(u, "openid pid_1_8")
+
+	for _, k := range []string{"birthdate", "age_equal_or_over", "age_in_years", "age_birth_year"} {
+		if _, ok := claims[k]; ok {
+			t.Fatalf("expected no %s for a user without a birthdate, got %v", k, claims)
+		}
+	}
+}
+
+func TestAgeInYearsBirthdayBoundary(t *testing.T) {
+	// Day before, day of, and day after an 18th birthday. The day-of case is
+	// why this compares month/day rather than day-of-year: 2026 is not a leap
+	// year but 2008 was, so the two dates' day-of-year numbers differ.
+	for _, tc := range []struct {
+		now  string
+		want int
+	}{
+		{"2026-06-19", 17},
+		{"2026-06-20", 18},
+		{"2026-06-21", 18},
+	} {
+		now, err := time.Parse("2006-01-02", tc.now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, _, ok := ageInYears("2008-06-20", now)
+		if !ok || got != tc.want {
+			t.Fatalf("ageInYears at %s = %d (ok=%v), want %d", tc.now, got, ok, tc.want)
+		}
+	}
+}
+
+func TestAgeInYearsRejectsUnparseableOrFuture(t *testing.T) {
+	now, _ := time.Parse("2006-01-02", "2026-06-20")
+	for _, bd := range []string{"", "not-a-date", "1990", "2030-01-01"} {
+		if _, _, ok := ageInYears(bd, now); ok {
+			t.Fatalf("expected ageInYears(%q) to report no derivable age", bd)
 		}
 	}
 }

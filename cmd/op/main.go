@@ -527,11 +527,44 @@ func claimsForScopes(user *users.User, scopeStr string) map[string]any {
 		}
 	}
 
+	// "pid" / "pid_1_8" / "pid_1_5" scopes → Person Identification Data.
+	//
+	// These three have been advertised in scopes_supported all along with no
+	// handler behind them, so a request naming one fell through to the
+	// backwards-compat block below and got four claims - given_name,
+	// family_name, name, email - with no birthdate, nationality, place of
+	// birth or issuing authority. That is not enough to build a PID from, so
+	// the issuer rejects the credential request outright.
+	//
+	// ARF 1.5 and ARF 1.8 describe the same person with different claim NAMES,
+	// and apigw uses the OIDC claims verbatim as the credential's document
+	// data - a claim under the other version's name simply isn't present to
+	// disclose, and a verifier's DCQL query for it won't match. So the two get
+	// separate branches rather than one shared set:
+	//
+	//	ARF 1.8            ARF 1.5
+	//	place_of_birth     birth_place
+	//	nationalities []   nationality (single)
+	//	age_equal_or_over  age_over_NN (flat booleans)
+	//
+	// "pid" (the unversioned scope) follows ARF 1.8, the current version.
+	// A request naming several of these is not meaningful - they are three
+	// spellings of one credential - so the most specific one wins rather than
+	// letting one overwrite the other's differently-named claims.
+	switch {
+	case has("pid_1_5"):
+		addPIDClaims(claims, user, false)
+	case has("pid_1_8"), has("pid"):
+		addPIDClaims(claims, user, true)
+	}
+
 	// If no recognized scopes matched, return all claims (backwards compat).
-	// "ehic" counts as recognized: without it here, an ehic-only request (which
-	// is what apigw sends - Scopes: []string{session.CredentialType}) would
-	// fall through and overwrite the EHIC claims above with profile ones.
-	if !has("profile") && !has("email") && !has("organisation") && !has("ehic") {
+	// Every scope handled above must be listed here: otherwise a request for
+	// exactly that scope - which is what apigw sends, one credential type at a
+	// time - matches nothing, falls through, and overwrites the claims that
+	// handler just set with the generic profile ones.
+	if !has("profile") && !has("email") && !has("organisation") && !has("ehic") &&
+		!has("pid") && !has("pid_1_5") && !has("pid_1_8") {
 		claims["given_name"] = user.GivenName
 		claims["family_name"] = user.FamilyName
 		claims["name"] = user.Name
@@ -539,6 +572,99 @@ func claimsForScopes(user *users.User, scopeStr string) map[string]any {
 	}
 
 	return claims
+}
+
+// addPIDClaims writes the Person Identification Data claims for one ARF
+// version into claims. arf18 selects the ARF 1.8 vocabulary; false selects
+// ARF 1.5. See the call site for why the two can't share one claim set.
+//
+// Only non-empty values are written, so a user carrying no PID data yields no
+// PID claims rather than empty ones (same rule the ehic branch follows) - an
+// empty string is a value the issuer would faithfully put in the credential.
+func addPIDClaims(claims map[string]any, user *users.User, arf18 bool) {
+	if user.GivenName != "" {
+		claims["given_name"] = user.GivenName
+	}
+	if user.FamilyName != "" {
+		claims["family_name"] = user.FamilyName
+	}
+	if user.Birthdate != "" {
+		claims["birthdate"] = user.Birthdate
+	}
+	if user.IssuingAuthority != "" {
+		claims["issuing_authority"] = user.IssuingAuthority
+	}
+	if user.IssuingCountry != "" {
+		claims["issuing_country"] = user.IssuingCountry
+	}
+
+	if arf18 {
+		if user.PlaceOfBirth != "" {
+			claims["place_of_birth"] = user.PlaceOfBirth
+		}
+		if len(user.Nationalities) > 0 {
+			claims["nationalities"] = user.Nationalities
+		}
+	} else {
+		if user.PlaceOfBirth != "" {
+			claims["birth_place"] = user.PlaceOfBirth
+		}
+		// ARF 1.5 carries a single nationality, not a list.
+		if len(user.Nationalities) > 0 {
+			claims["nationality"] = user.Nationalities[0]
+		}
+	}
+
+	// Age attributes are derived from birthdate rather than stored per user,
+	// so they can't go stale as the fixture data ages. Without them a verifier
+	// asking for age_over_18 (ARF 1.5) or age_equal_or_over.18 (ARF 1.8) finds
+	// nothing to match - DCQL requires every requested claim to be present.
+	age, born, ok := ageInYears(user.Birthdate, time.Now())
+	if !ok {
+		return
+	}
+	claims["age_in_years"] = age
+	claims["age_birth_year"] = born.Year()
+
+	thresholds := []int{14, 16, 18, 21, 65}
+	if arf18 {
+		over := make(map[string]bool, len(thresholds))
+		for _, t := range thresholds {
+			over[fmt.Sprintf("%d", t)] = age >= t
+		}
+		claims["age_equal_or_over"] = over
+		return
+	}
+	for _, t := range thresholds {
+		claims[fmt.Sprintf("age_over_%d", t)] = age >= t
+	}
+}
+
+// pidBirthdateLayout is the full-date form RFC 7519 / OpenID Connect use for
+// the birthdate claim, and the form users.yaml is written in.
+const pidBirthdateLayout = "2006-01-02"
+
+// ageInYears returns the user's completed years of age at now, along with the
+// parsed birthdate. ok is false if birthdate is empty, not a full date, or in
+// the future - in which case no age attribute can be derived and none should
+// be emitted.
+//
+// The birthday check compares month and day rather than day-of-year: in a leap
+// year every date after February shifts by one day-of-year, which would report
+// the wrong age for a whole day around each such birthday.
+func ageInYears(birthdate string, now time.Time) (int, time.Time, bool) {
+	born, err := time.Parse(pidBirthdateLayout, birthdate)
+	if err != nil {
+		return 0, time.Time{}, false
+	}
+	age := now.Year() - born.Year()
+	if now.Month() < born.Month() || (now.Month() == born.Month() && now.Day() < born.Day()) {
+		age--
+	}
+	if age < 0 {
+		return 0, time.Time{}, false
+	}
+	return age, born, true
 }
 
 // --- Helpers ---
