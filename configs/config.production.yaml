@@ -13,6 +13,9 @@ server:
     - pid_1_5
     - pid_1_8
     - ehic
+    - eucc
+    - eu_poa
+    - ebw_oid
 
 clients:
   - client_id: "${CLIENT_ID:-mini-oidc-rp}"

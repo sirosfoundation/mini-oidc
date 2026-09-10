@@ -109,6 +109,52 @@ users:
         post_name: "Stockholm"
         admin_unit_l1: "SE"
         admin_unit_l2: "Stockholm"
+    # EU Business Wallet attestations (WE BUILD ds001/ds004), released
+    # verbatim under the scope named by the key - see users.go Attestations.
+    attestations:
+      ebw_oid:
+        id: "SEBOLAG.5591234567"
+        name: "Nordic Tech Solutions AB"
+        attestation_legal_category: "PUB-EAA"
+        issuing_authority: "Bolagsverket"
+        issuing_country: "SE"
+        date_of_expiry: "2027-12-31"
+        trust_anchor: "https://trust.example.org/anchors/se/bolagsverket"
+      eucc:
+        legal_person_name: "Nordic Tech Solutions AB"
+        legal_person_id: "SEBOLAG.5591234567"
+        legal_form_type: "Aktiebolag (AB)"
+        registration_member_state: "SE"
+        registered_address:
+          full_address: "Sveavägen 42, 111 34 Stockholm, Sweden"
+          thorough_fare: "Sveavägen"
+          locator_designator: "42"
+          post_code: "111 34"
+          post_name: "Stockholm"
+          admin_unit_level_1: "SE"
+          admin_unit_level_2: "Stockholm"
+        registration_date: "2015-06-01"
+        legal_person_status: "active"
+        legal_person_activity:
+          code: "62.01"
+          description: "Computer programming activities"
+        legal_representative:
+          - "Erik Lindström"
+        share_capital:
+          amount: "500000"
+          currency: "SEK"
+        digital_contact_point:
+          email: "info@nordictech.example.com"
+          website: "https://nordictech.example.com"
+        issuing_authority: "Bolagsverket"
+        issuing_authority_id: "SE:BOLAGSVERKET"
+        issuing_country: "SE"
+        issuing_jurisdiction: "SE"
+        issuance_date: "2026-01-15T09:00:00Z"
+        authentic_source_id: "SE:BOLAGSVERKET"
+        authentic_source_name: "Bolagsverket"
+        attestation_legal_category: "PUB-EAA"
+        trust_anchor: "https://trust.example.org/anchors/se/bolagsverket"
 
   # --- Joint representative (one of two signatories) ---
 
@@ -145,6 +191,52 @@ users:
         post_name: "Berlin"
         admin_unit_l1: "DE"
         admin_unit_l2: "Berlin"
+    # EU Business Wallet attestations - see erik-010 for the mechanism.
+    attestations:
+      ebw_oid:
+        id: "DEHRB.B123456"
+        name: "Grünberg Consulting GmbH"
+        attestation_legal_category: "PUB-EAA"
+        issuing_authority: "Amtsgericht Charlottenburg (Handelsregister)"
+        issuing_country: "DE"
+        date_of_expiry: "2027-06-30"
+        trust_anchor: "https://trust.example.org/anchors/de/handelsregister"
+      eucc:
+        legal_person_name: "Grünberg Consulting GmbH"
+        legal_person_id: "DEHRB.B123456"
+        legal_form_type: "Gesellschaft mit beschränkter Haftung (GmbH)"
+        registration_member_state: "DE"
+        registered_address:
+          full_address: "Friedrichstraße 100, 10117 Berlin, Germany"
+          thorough_fare: "Friedrichstraße"
+          locator_designator: "100"
+          post_code: "10117"
+          post_name: "Berlin"
+          admin_unit_level_1: "DE"
+          admin_unit_level_2: "Berlin"
+        registration_date: "2010-02-15"
+        legal_person_status: "active"
+        legal_person_activity:
+          code: "70.22"
+          description: "Business and other management consultancy"
+        legal_representative:
+          - "Maria Schneider"
+          - "Thomas Grünberg"
+        share_capital:
+          amount: "25000"
+          currency: "EUR"
+        digital_contact_point:
+          email: "kontakt@gruenberg-gmbh.example.com"
+          website: "https://gruenberg-gmbh.example.com"
+        issuing_authority: "Amtsgericht Charlottenburg (Handelsregister)"
+        issuing_authority_id: "DE:AG-CHARLOTTENBURG"
+        issuing_country: "DE"
+        issuing_jurisdiction: "DE-BE"
+        issuance_date: "2026-01-20T10:30:00Z"
+        authentic_source_id: "DE:HANDELSREGISTER"
+        authentic_source_name: "Handelsregister"
+        attestation_legal_category: "PUB-EAA"
+        trust_anchor: "https://trust.example.org/anchors/de/handelsregister"
 
   # --- Employee / contact person (no signing authority) ---
 
@@ -177,6 +269,79 @@ users:
         post_name: "Berlin"
         admin_unit_l1: "DE"
         admin_unit_l2: "Berlin"
+    # Jan has no signing authority of his own: he holds the company's EUCC
+    # and a Power of Attorney granted by Maria (the CFO) for procurement.
+    attestations:
+      eucc:
+        legal_person_name: "Grünberg Consulting GmbH"
+        legal_person_id: "DEHRB.B123456"
+        legal_form_type: "Gesellschaft mit beschränkter Haftung (GmbH)"
+        registration_member_state: "DE"
+        registered_address:
+          full_address: "Friedrichstraße 100, 10117 Berlin, Germany"
+          thorough_fare: "Friedrichstraße"
+          locator_designator: "100"
+          post_code: "10117"
+          post_name: "Berlin"
+          admin_unit_level_1: "DE"
+          admin_unit_level_2: "Berlin"
+        registration_date: "2010-02-15"
+        legal_person_status: "active"
+        legal_person_activity:
+          code: "70.22"
+          description: "Business and other management consultancy"
+        legal_representative:
+          - "Maria Schneider"
+          - "Thomas Grünberg"
+        share_capital:
+          amount: "25000"
+          currency: "EUR"
+        digital_contact_point:
+          email: "kontakt@gruenberg-gmbh.example.com"
+          website: "https://gruenberg-gmbh.example.com"
+        issuing_authority: "Amtsgericht Charlottenburg (Handelsregister)"
+        issuing_authority_id: "DE:AG-CHARLOTTENBURG"
+        issuing_country: "DE"
+        issuing_jurisdiction: "DE-BE"
+        issuance_date: "2026-01-20T10:30:00Z"
+        authentic_source_id: "DE:HANDELSREGISTER"
+        authentic_source_name: "Handelsregister"
+        attestation_legal_category: "PUB-EAA"
+        trust_anchor: "https://trust.example.org/anchors/de/handelsregister"
+      eu_poa:
+        attestation_legal_category: "QEAA"
+        issuing_authority: "Notariat Berlin-Mitte"
+        issuing_country: "DE"
+        date_of_execution: "2026-02-01"
+        euid_reference: "DEHRB.B123456"
+        principal_full_name: "Maria Schneider"
+        principal_date_of_birth: "1982-09-14"
+        principal_place_of_birth: "Berlin"
+        principal_identification_document_kind: "national_id_card"
+        principal_identification_document_number: "L01X00T47"
+        principal_full_address: "Kastanienallee 12, 10435 Berlin, Germany"
+        company_statutory_full_name: "Grünberg Consulting GmbH"
+        company_business_register_name: "Handelsregister Amtsgericht Charlottenburg"
+        company_business_register_location: "Berlin"
+        company_kind_of_legal_entity: "GmbH"
+        company_jurisdiction: "DE"
+        company_registered_office: "Friedrichstraße 100, 10117 Berlin, Germany"
+        attorney_full_name: "Jan Kowalski"
+        attorney_date_of_birth: "1993-07-08"
+        attorney_place_of_birth: "Warsaw"
+        attorney_identification_document_kind: "passport"
+        attorney_identification_document_number: "ZS0123456"
+        attorney_full_address: "Prenzlauer Allee 200, 10405 Berlin, Germany"
+        scope_of_representation_powers:
+          - "Conclusion of purchase and service contracts up to EUR 50,000"
+          - "Signing of tender documents and supplier registrations"
+        scope_of_representation_power_of_substitution: "not_allowed"
+        validity_period_valid_from: "2026-02-01"
+        validity_period_valid_until: "2027-01-31"
+        applicable_law_jurisdiction: "DE"
+        signing_place: "Berlin"
+        signing_date: "2026-02-01"
+        trust_anchor: "https://trust.example.org/anchors/de/notariat"
 
   # --- Representative of a French company (sole trader / power of attorney) ---
 
@@ -211,3 +376,83 @@ users:
         post_name: "Lyon"
         admin_unit_l1: "FR"
         admin_unit_l2: "Auvergne-Rhône-Alpes"
+    # Sophie is the sole manager of Transport Dubois SARL and also holds a
+    # Power of Attorney from her co-founder for the company's banking.
+    attestations:
+      ebw_oid:
+        id: "FRRCS.Lyon.B987654321"
+        name: "Transport Dubois SARL"
+        attestation_legal_category: "PUB-EAA"
+        issuing_authority: "Greffe du Tribunal de Commerce de Lyon"
+        issuing_country: "FR"
+        date_of_expiry: "2027-11-20"
+        trust_anchor: "https://trust.example.org/anchors/fr/infogreffe"
+      eucc:
+        legal_person_name: "Transport Dubois SARL"
+        legal_person_id: "FRRCS.Lyon.B987654321"
+        legal_form_type: "Société à responsabilité limitée (SARL)"
+        registration_member_state: "FR"
+        registered_address:
+          full_address: "15 Rue de la République, 69002 Lyon, France"
+          thorough_fare: "Rue de la République"
+          locator_designator: "15"
+          post_code: "69002"
+          post_name: "Lyon"
+          admin_unit_level_1: "FR"
+          admin_unit_level_2: "Auvergne-Rhône-Alpes"
+        registration_date: "2018-11-20"
+        legal_person_status: "active"
+        legal_person_activity:
+          code: "49.41"
+          description: "Freight transport by road"
+        legal_representative:
+          - "Sophie Dubois"
+        share_capital:
+          amount: "10000"
+          currency: "EUR"
+        digital_contact_point:
+          email: "contact@transport-dubois.example.com"
+          website: "https://transport-dubois.example.com"
+        issuing_authority: "Greffe du Tribunal de Commerce de Lyon"
+        issuing_authority_id: "FR:GREFFE-LYON"
+        issuing_country: "FR"
+        issuing_jurisdiction: "FR"
+        issuance_date: "2026-01-10T08:15:00Z"
+        authentic_source_id: "FR:INFOGREFFE"
+        authentic_source_name: "Infogreffe"
+        attestation_legal_category: "PUB-EAA"
+        trust_anchor: "https://trust.example.org/anchors/fr/infogreffe"
+      eu_poa:
+        attestation_legal_category: "QEAA"
+        issuing_authority: "Chambre des Notaires du Rhône"
+        issuing_country: "FR"
+        date_of_execution: "2026-01-12"
+        euid_reference: "FRRCS.Lyon.B987654321"
+        principal_full_name: "Pierre Dubois"
+        principal_date_of_birth: "1960-04-02"
+        principal_place_of_birth: "Villeurbanne"
+        principal_identification_document_kind: "national_id_card"
+        principal_identification_document_number: "690012345678"
+        principal_full_address: "8 Quai Saint-Antoine, 69002 Lyon, France"
+        company_statutory_full_name: "Transport Dubois SARL"
+        company_business_register_name: "Registre du Commerce et des Sociétés de Lyon"
+        company_business_register_location: "Lyon"
+        company_kind_of_legal_entity: "SARL"
+        company_jurisdiction: "FR"
+        company_registered_office: "15 Rue de la République, 69002 Lyon, France"
+        attorney_full_name: "Sophie Dubois"
+        attorney_date_of_birth: "1988-12-01"
+        attorney_place_of_birth: "Lyon"
+        attorney_identification_document_kind: "passport"
+        attorney_identification_document_number: "21AB45678"
+        attorney_full_address: "22 Rue Garibaldi, 69006 Lyon, France"
+        scope_of_representation_powers:
+          - "Opening and operating the company's bank accounts"
+          - "Signing loan and leasing agreements for vehicles"
+        scope_of_representation_power_of_substitution: "limited"
+        validity_period_valid_from: "2026-01-12"
+        validity_period_valid_until: "2028-01-11"
+        applicable_law_jurisdiction: "FR"
+        signing_place: "Lyon"
+        signing_date: "2026-01-12"
+        trust_anchor: "https://trust.example.org/anchors/fr/notaires"
