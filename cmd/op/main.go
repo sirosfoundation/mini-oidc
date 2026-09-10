@@ -558,13 +558,28 @@ func claimsForScopes(user *users.User, scopeStr string) map[string]any {
 		addPIDClaims(claims, user, true)
 	}
 
+	// Attestation scopes (users.Attestations) - released verbatim, see the
+	// field's doc. A user without a block for a requested scope gets no
+	// claims from it; apigw then fails issuance for lack of data rather than
+	// minting an empty credential, which is the right outcome for a test IdP.
+	attested := false
+	for _, sc := range scopes {
+		if att, ok := user.Attestations[sc]; ok {
+			attested = true
+			for k, v := range att {
+				claims[k] = v
+			}
+		}
+	}
+
 	// If no recognized scopes matched, return all claims (backwards compat).
 	// Every scope handled above must be listed here: otherwise a request for
 	// exactly that scope - which is what apigw sends, one credential type at a
 	// time - matches nothing, falls through, and overwrites the claims that
-	// handler just set with the generic profile ones.
+	// handler just set with the generic profile ones. An attestation scope
+	// that matched counts the same way.
 	if !has("profile") && !has("email") && !has("organisation") && !has("ehic") &&
-		!has("pid") && !has("pid_1_5") && !has("pid_1_8") {
+		!has("pid") && !has("pid_1_5") && !has("pid_1_8") && !attested {
 		claims["given_name"] = user.GivenName
 		claims["family_name"] = user.FamilyName
 		claims["name"] = user.Name

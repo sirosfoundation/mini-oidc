@@ -59,6 +59,23 @@ type User struct {
 	Role               string        `yaml:"role" json:"role,omitempty"`
 	RepresentationType string        `yaml:"representation_type" json:"representation_type,omitempty"`
 	EmployeeID         string        `yaml:"employee_id" json:"employee_id,omitempty"`
+
+	// Attestations are further credential payloads, keyed by the OIDC scope
+	// that releases them, e.g.
+	//
+	//	attestations:
+	//	  eucc:    {legal_person_name: ..., registered_address: {...}, ...}
+	//	  eu_poa:  {attorney_full_name: ..., ...}
+	//	  ebw_oid: {id: ..., name: ..., ...}
+	//
+	// Every key/value of the matching map is released verbatim as a top-level
+	// claim when that scope is requested - the same contract EHIC uses: vc's
+	// apigw requests the credential type as the scope and stores the claims
+	// as the credential's document data unchanged. So the keys must be the
+	// claim names the credential type's VCTM declares (nested objects stay
+	// nested). Data-driven on purpose: a new credential type is a users.yaml
+	// block plus a scopes_supported entry, not a Go change.
+	Attestations map[string]map[string]any `yaml:"attestations" json:"attestations,omitempty"`
 }
 
 // EHIC holds the data released under the "ehic" scope. Field names mirror the

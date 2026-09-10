@@ -21,7 +21,8 @@ binaries; select which to run via the command.
 - Pushed Authorization Requests (`/par`, RFC 9126)
 - Token endpoint with `client_secret_basic`, `client_secret_post`, and `none` auth
 - Scope-based claim filtering (`profile` → name/birthdate, `email` → email)
-- Configurable scopes including OID4VCI credential scopes (`pid`, `pid_1_5`, `pid_1_8`)
+- Configurable scopes including OID4VCI credential scopes (`pid`, `pid_1_5`, `pid_1_8`, `ehic`)
+- Data-driven attestation scopes: any `attestations:` block in `users.yaml` is released verbatim under the scope named by its key (shipped: `eucc`, `eu_poa`, `ebw_oid` for the EU Business Wallet)
 - Dynamic client registration (`/register`, RFC 7591)
 - JWKS endpoint (ES256 keys, generated at startup)
 - UserInfo endpoint (Bearer token validated)
@@ -60,7 +61,7 @@ server:
   op_port: 9005
   rp_port: 9006
   issuer: "${ISSUER}"
-  scopes_supported: [openid, profile, email, pid, pid_1_5, pid_1_8]
+  scopes_supported: [openid, profile, email, organisation, pid, pid_1_5, pid_1_8, ehic, eucc, eu_poa, ebw_oid]
 
 clients:
   - client_id: "mini-oidc-rp"
@@ -110,6 +111,40 @@ users:
     issuing_authority: "Swedish Tax Agency"
     issuing_country: "SE"
 ```
+
+### Attestations (credential payloads per scope)
+
+vc's apigw requests one credential type at a time, using the type's scope
+name, and stores the OIDC claims it gets back verbatim as the credential's
+document data. `attestations:` is that contract as data: each key is a scope,
+each value the claims released when it is requested - so the keys must be the
+claim names the credential type's VCTM declares, nested objects included, and
+a new credential type is a `users.yaml` block plus a `scopes_supported` entry.
+
+```yaml
+  - sub: "erik-010"
+    given_name: "Erik"
+    # ...
+    attestations:
+      ebw_oid:                              # scope ebw_oid -> uri:eu.ebw.oid.1
+        id: "SEBOLAG.5591234567"
+        name: "Nordic Tech Solutions AB"
+        attestation_legal_category: "PUB-EAA"
+        issuing_authority: "Bolagsverket"
+        issuing_country: "SE"
+      eucc:                                 # scope eucc -> urn:eudi:eucc:1
+        legal_person_name: "Nordic Tech Solutions AB"
+        registered_address: {full_address: "Sveavägen 42, 111 34 Stockholm, Sweden", post_name: "Stockholm"}
+        legal_representative: ["Erik Lindström"]
+        # ...
+```
+
+The shipped `users.yaml` gives the company users (`erik-010`, `maria-011`,
+`jan-012`, `sophie-013`) EU Business Wallet attestations - Owner
+Identification Data (EBW-OID, WE BUILD ds001), EU Company Certificate (EUCC,
+ds004) and EU Power of Attorney (EU PoA, ds007) - with the claims those
+rulebooks' SD-JWT schemas require. The natural persons (`alice-001` ...) have
+none, so asking them for one of these types fails for lack of data.
 
 ## OIDC Endpoints
 

@@ -292,3 +292,120 @@ func TestAgeInYearsRejectsUnparseableOrFuture(t *testing.T) {
 		}
 	}
 }
+
+// --- attestations: data-driven credential payloads released per scope ---
+
+func testCompanyUser() *users.User {
+	u := testUser()
+	u.Attestations = map[string]map[string]any{
+		"eucc": {
+			"legal_person_name": "Analytical Engines Ltd",
+			"legal_person_id":   "UKCRO.00012345",
+			"registered_address": map[string]any{
+				"full_address": "1 Dorset Street, London",
+				"post_name":    "London",
+			},
+			"legal_representative": []any{"Ada Lovelace"},
+		},
+		"ebw_oid": {
+			"id":   "UKCRO.00012345",
+			"name": "Analytical Engines Ltd",
+		},
+	}
+	return u
+}
+
+func TestClaimsForScopesAttestationReleasedVerbatim(t *testing.T) {
+	claims := claimsForScopes(testCompanyUser(), "eucc")
+
+	if claims["legal_person_name"] != "Analytical Engines Ltd" || claims["legal_person_id"] != "UKCRO.00012345" {
+		t.Fatalf("expected the eucc attestation's claims at top level, got %v", claims)
+	}
+	addr, ok := claims["registered_address"].(map[string]any)
+	if !ok || addr["post_name"] != "London" {
+		t.Fatalf("nested objects must be released as-is, got %v", claims["registered_address"])
+	}
+	// An attestation-only request is a recognized scope: the backwards-compat
+	// fallback must not paint profile claims over it.
+	if _, ok := claims["given_name"]; ok {
+		t.Fatalf("attestation scope must not fall through to the profile fallback, got %v", claims)
+	}
+	// And other attestations stay unreleased.
+	if _, ok := claims["id"]; ok {
+		t.Fatalf("ebw_oid claims released without the ebw_oid scope: %v", claims)
+	}
+}
+
+func TestClaimsForScopesAttestationOnlyForRequestedScope(t *testing.T) {
+	claims := claimsForScopes(testCompanyUser(), "openid profile ebw_oid")
+
+	if claims["name"] != "Analytical Engines Ltd" {
+		t.Fatalf("ebw_oid must override profile's name with the legal person's, got %v", claims["name"])
+	}
+	if _, ok := claims["legal_person_name"]; ok {
+		t.Fatalf("eucc claims released without the eucc scope: %v", claims)
+	}
+}
+
+func TestClaimsForScopesAttestationAbsentForUserWithoutIt(t *testing.T) {
+	claims := claimsForScopes(testUser(), "eucc")
+
+	if _, ok := claims["legal_person_name"]; ok {
+		t.Fatalf("user without an eucc block must not get eucc claims: %v", claims)
+	}
+	// Unknown-to-this-user scope: the backwards-compat fallback applies, as before.
+	if claims["given_name"] != "Ada" {
+		t.Fatalf("expected the profile fallback for an unmatched scope, got %v", claims)
+	}
+}
+
+// The shipped users.yaml must give the company users complete EU Business
+// Wallet attestations - the claims the WE BUILD SD-JWT schemas mark required
+// (minus vct/iss/cnf/timestamps, which the issuer adds).
+func TestShippedUsersHaveCompleteEUBusinessWalletAttestations(t *testing.T) {
+	store, err := users.Load("../../users.yaml")
+	if err != nil {
+		t.Fatalf("load users.yaml: %v", err)
+	}
+	required := map[string][]string{
+		"ebw_oid": {"id", "name", "attestation_legal_category", "issuing_authority", "issuing_country"},
+		"eucc": {"legal_person_name", "legal_person_id", "legal_form_type", "registration_member_state",
+			"registered_address", "registration_date", "legal_person_status", "legal_person_activity",
+			"issuing_authority", "issuing_authority_id", "issuing_country", "issuance_date",
+			"authentic_source_id", "authentic_source_name", "legal_representative"},
+		"eu_poa": {"attestation_legal_category", "issuing_authority", "issuing_country", "date_of_execution",
+			"euid_reference", "principal_full_name", "principal_date_of_birth", "company_statutory_full_name",
+			"company_business_register_name", "company_jurisdiction", "attorney_full_name",
+			"scope_of_representation_powers", "validity_period_valid_from", "validity_period_valid_until",
+			"applicable_law_jurisdiction", "signing_place", "signing_date"},
+	}
+	expect := map[string][]string{
+		"erik-010":   {"ebw_oid", "eucc"},
+		"maria-011":  {"ebw_oid", "eucc"},
+		"jan-012":    {"eucc", "eu_poa"},
+		"sophie-013": {"ebw_oid", "eucc", "eu_poa"},
+	}
+	for sub, scopes := range expect {
+		u := store.FindBySub(sub)
+		if u == nil {
+			t.Fatalf("user %s missing from users.yaml", sub)
+		}
+		for _, scope := range scopes {
+			att := u.Attestations[scope]
+			if att == nil {
+				t.Errorf("%s: no %s attestation", sub, scope)
+				continue
+			}
+			for _, key := range required[scope] {
+				if _, ok := att[key]; !ok {
+					t.Errorf("%s/%s: required claim %q missing", sub, scope, key)
+				}
+			}
+		}
+	}
+	for _, sub := range []string{"alice-001", "bob-002", "carol-003"} {
+		if u := store.FindBySub(sub); u != nil && len(u.Attestations) != 0 {
+			t.Errorf("%s is a natural person and should carry no company attestations", sub)
+		}
+	}
+}
