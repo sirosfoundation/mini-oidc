@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -46,9 +47,16 @@ var (
 	}{m: make(map[string]*authCode)}
 	tokenStore = struct {
 		sync.RWMutex
-		m map[string]string
-	}{m: make(map[string]string)}
+		m map[string]grantedToken
+	}{m: make(map[string]grantedToken)}
 )
+
+// grantedToken is what an access token was issued for: the user and the scope
+// the authorization request named.
+type grantedToken struct {
+	sub   string
+	scope string
+}
 
 func main() {
 	configFile := envOr("CONFIG_FILE", "configs/config.yaml")
@@ -361,7 +369,7 @@ func handleToken(w http.ResponseWriter, r *http.Request) {
 
 	accessToken := randomHex(32)
 	tokenStore.Lock()
-	tokenStore.m[accessToken] = user.Sub
+	tokenStore.m[accessToken] = grantedToken{sub: user.Sub, scope: ac.Scope}
 	tokenStore.Unlock()
 
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -378,7 +386,7 @@ func handleUserinfo(w http.ResponseWriter, r *http.Request) {
 	token := strings.TrimPrefix(auth, "Bearer ")
 
 	tokenStore.RLock()
-	sub, ok := tokenStore.m[token]
+	granted, ok := tokenStore.m[token]
 	tokenStore.RUnlock()
 
 	if !ok {
@@ -386,12 +394,31 @@ func handleUserinfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := userStore.FindBySub(sub)
+	user := userStore.FindBySub(granted.sub)
 	if user == nil {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "user_not_found"})
 		return
 	}
-	writeJSON(w, http.StatusOK, user)
+	writeJSON(w, http.StatusOK, userinfoClaims(user, granted.scope))
+}
+
+// userinfoClaims is the user record with the claims of the granted scope laid
+// over it. A relying party merges UserInfo over the ID token (OIDC Core 5.3.2),
+// so a bare user record would overwrite the scoped claims with same-named
+// top-level fields: the "ehic" scope's issuing_authority is {id, name}, the
+// record's is a string.
+func userinfoClaims(user *users.User, scope string) map[string]any {
+	raw, err := json.Marshal(user)
+	if err != nil {
+		return map[string]any{"sub": user.Sub}
+	}
+	out := make(map[string]any)
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return map[string]any{"sub": user.Sub}
+	}
+	maps.Copy(out, claimsForScopes(user, scope))
+	out["sub"] = user.Sub
+	return out
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
