@@ -409,3 +409,28 @@ func TestShippedUsersHaveCompleteEUBusinessWalletAttestations(t *testing.T) {
 		}
 	}
 }
+
+func TestUserinfoScopedClaimsWinOverTheUserRecord(t *testing.T) {
+	info := userinfoClaims(ehicUser(), "openid profile ehic")
+
+	// The record's own issuing_authority is a string; the ehic scope's is the
+	// {id, name} pair the credential type declares, and it must be the one a
+	// relying party sees after merging UserInfo over the ID token.
+	ia, ok := info["issuing_authority"].(*users.NamedParty)
+	if !ok || ia.ID != "SE:FK" {
+		t.Fatalf("issuing_authority = %#v, want the ehic {id,name} pair", info["issuing_authority"])
+	}
+	if info["document_number"] != "SE-EHIC-0000000001" {
+		t.Fatalf("document_number missing from userinfo: %v", info)
+	}
+	if info["sub"] != "user-1" {
+		t.Fatalf("sub = %v", info["sub"])
+	}
+}
+
+func TestUserinfoWithoutAttestationScopeKeepsTheUserRecord(t *testing.T) {
+	info := userinfoClaims(ehicUser(), "openid profile")
+	if info["issuing_authority"] != "Swedish Tax Agency" {
+		t.Fatalf("a profile-only grant must keep the record's claims, got %v", info["issuing_authority"])
+	}
+}
